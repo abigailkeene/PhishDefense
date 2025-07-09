@@ -134,19 +134,59 @@
             max-width: 400px;
             width: 90%;
         }
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+        }
+        .leaderboard-table th, .leaderboard-table td {
+            border: 1px solid #4a5568;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .leaderboard-table th {
+            background-color: #4a5568;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        .leaderboard-table tr:nth-child(even) {
+            background-color: #2d3748;
+        }
+        .leaderboard-table tr:nth-child(odd) {
+            background-color: #1a202c;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
         <h1 class="text-4xl font-bold mb-6 text-white">PhishDefense Game</h1>
 
-        <!-- Login Screen -->
-        <div id="login-screen" class="flex flex-col gap-4">
-            <h2 class="text-2xl font-semibold">User Authentication</h2>
-            <input type="text" id="username" placeholder="Username" class="mb-2">
-            <input type="password" id="password" placeholder="Password" class="mb-4">
-            <button id="login-button" class="button-primary">Login</button>
-            <p id="login-message" class="text-red-400 hidden">Invalid username or password.</p>
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="flex flex-col gap-4 items-center justify-center">
+            <div class="loading-spinner"></div>
+            <p class="text-lg">Loading game...</p>
+        </div>
+
+        <!-- Set Username Screen -->
+        <div id="set-username-screen" class="hidden flex flex-col gap-4">
+            <h2 class="text-2xl font-semibold">Set Your Player Name</h2>
+            <p class="text-lg">This name will appear on the leaderboard.</p>
+            <input type="text" id="player-username-input" placeholder="Enter your desired username" class="mb-4">
+            <button id="save-username-button" class="button-primary">Save Username</button>
+            <p id="username-error-message" class="text-red-400 hidden">Please enter a username.</p>
         </div>
 
         <!-- Game Introduction -->
@@ -179,6 +219,23 @@
             <p class="text-xl">Your final security level for Phase 1 is: <span id="final-security-level" class="font-bold text-yellow-400"></span>%</p>
             <div id="medal-award" class="medal-display"></div>
             <p class="text-lg mt-4">Congratulations on completing the Foundational Awareness phase!</p>
+
+            <h3 class="text-2xl font-semibold mt-8 mb-4">Leaderboard</h3>
+            <div id="leaderboard-loading" class="loading-spinner"></div>
+            <table id="leaderboard-table" class="leaderboard-table hidden">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <!-- Leaderboard data will be loaded here -->
+                </tbody>
+            </table>
+            <p id="leaderboard-error" class="text-red-400 hidden">No scores yet. Be the first!</p>
+
             <button id="restart-game-button" class="button-primary mt-6">Play Again</button>
         </div>
 
@@ -193,10 +250,39 @@
 
     </div>
 
-    <script>
-        // Global game state variables
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, addDoc, collection, query, onSnapshot, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        // This is the configuration you provided.
+        const firebaseConfig = {
+            apiKey: "AIzaSyDP05NGrLSDWZ9ItSgIuf4TPSX6LhQh_tA",
+            authDomain: "gen-lang-client-0227847209.firebaseapp.com",
+            projectId: "gen-lang-client-0227847209",
+            storageBucket: "gen-lang-client-0227847209.firebasestorage.app",
+            messagingSenderId: "778908946281",
+            appId: "1:778908946281:web:97e09c14faccc30fa237f8",
+            measurementId: "G-RSY79PBTHG"
+        };
+
+        // This appId will be used for the Firestore collection path for public data.
+        // It's a fixed string for external deployment. Make sure your Firestore Security Rules
+        // match this path: /artifacts/phishdefense-game-app/public/data/leaderboard/{documentId}
+        const appId = 'phishdefense-game-app';
+
+        // Initialize Firebase
+        let app;
+        let db;
+        let auth;
+        let userId = null; // Will store the current user's ID
+        let currentUsername = null; // Will store the user's chosen display name
+
+        // Game state and DOM elements
         let gameData = {
-            currentScreen: 'login',
+            currentScreen: 'loading',
             securityLevel: 100,
             currentScenarioIndex: 0,
             phase1Scenarios: [
@@ -205,7 +291,7 @@
                     description: "You receive an email claiming to be from HR, asking you to confirm your payroll information for a bonus. It contains a link.",
                     options: [
                         { text: "Option 1: Report to HR", effect: 0, feedback: "Excellent choice! Reporting suspicious emails helps protect everyone. This was a phishing attempt." },
-                        { text: "Option 2: Ignore email", effect: -10, feedback: "While ignoring suspicious emails is better than clicking, not reporting it leaves the threat unaddressed. Your security level decreased slightly." }, // Changed effect to -10
+                        { text: "Option 2: Ignore email", effect: -10, feedback: "While ignoring suspicious emails is better than clicking, not reporting it leaves the threat unaddressed. Your security level decreased slightly." },
                         { text: "Option 3: Click Link", effect: -20, feedback: "Oh no! Clicking suspicious links can lead to malware or credential theft. Your security level decreased." }
                     ]
                 },
@@ -231,11 +317,11 @@
         };
 
         // DOM elements
-        const loginScreen = document.getElementById('login-screen');
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        const loginButton = document.getElementById('login-button');
-        const loginMessage = document.getElementById('login-message');
+        const loadingScreen = document.getElementById('loading-screen');
+        const setUsernameScreen = document.getElementById('set-username-screen');
+        const playerUsernameInput = document.getElementById('player-username-input');
+        const saveUsernameButton = document.getElementById('save-username-button');
+        const usernameErrorMessage = document.getElementById('username-error-message');
 
         const introScreen = document.getElementById('intro-screen');
         const startGameButton = document.getElementById('start-game-button');
@@ -254,6 +340,10 @@
         const finalSecurityLevelDisplay = document.getElementById('final-security-level');
         const medalAward = document.getElementById('medal-award');
         const restartGameButton = document.getElementById('restart-game-button');
+        const leaderboardTable = document.getElementById('leaderboard-table');
+        const leaderboardBody = document.getElementById('leaderboard-body');
+        const leaderboardLoading = document.getElementById('leaderboard-loading');
+        const leaderboardError = document.getElementById('leaderboard-error');
 
         const messageModal = document.getElementById('message-modal');
         const modalTitle = document.getElementById('modal-title');
@@ -277,7 +367,8 @@
          * Hides all main game screens.
          */
         function hideAllScreens() {
-            loginScreen.classList.add('hidden');
+            loadingScreen.classList.add('hidden');
+            setUsernameScreen.classList.add('hidden');
             introScreen.classList.add('hidden');
             gamePlayScreen.classList.add('hidden');
             resultsScreen.classList.add('hidden');
@@ -305,32 +396,89 @@
             }, 500); // 500ms delay
         }
 
+        // --- Firebase Initialization and Authentication ---
+
+        async function initializeFirebase() {
+            try {
+                // Log the config to console for debugging
+                console.log("Firebase config being used:", firebaseConfig);
+
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                hideAllScreens(); // Hide all screens initially
+                loadingScreen.classList.remove('hidden'); // Show loading spinner
+
+                // Sign in anonymously
+                await signInAnonymously(auth);
+
+                // Listen for auth state changes AFTER initial sign-in attempt
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        // Attempt to retrieve existing username for this anonymous user
+                        const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile`, 'info');
+                        const userDoc = await getDoc(userDocRef);
+                        if (userDoc.exists() && userDoc.data().username) {
+                            currentUsername = userDoc.data().username;
+                            showIntroScreen(); // User has username, go to intro
+                        } else {
+                            showSetUsernameScreen(); // User needs to set username
+                        }
+                    } else {
+                        // This case should ideally not happen if signInAnonymously succeeds,
+                        // but it's good for robustness.
+                        console.warn("onAuthStateChanged received no user. Authentication might have failed or user signed out.");
+                        showModal("Authentication Error", "Could not sign in. Please refresh the page and ensure Firebase Authentication is correctly set up.");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase or authenticating:", error);
+                // More specific error message for the user
+                let errorMessage = "Failed to initialize game. Please check your Firebase configuration and network connection.";
+                if (error.code === 'auth/configuration-not-found') {
+                    errorMessage = "Firebase Authentication is not configured or enabled for this project. Please ensure 'Anonymous' sign-in is enabled in your Firebase project's Authentication settings.";
+                } else if (error.message) {
+                    errorMessage += " Error: " + error.message;
+                }
+                showModal("Error", errorMessage);
+                hideAllScreens(); // Hide loading screen and show nothing or an error message
+            }
+        }
+
         // --- Game Flow Functions ---
 
         /**
-         * Shows the login screen.
+         * Shows the set username screen.
          */
-        function showLoginScreen() {
+        async function showSetUsernameScreen() {
             hideAllScreens();
-            loginScreen.classList.remove('hidden');
-            usernameInput.value = '';
-            passwordInput.value = '';
-            loginMessage.classList.add('hidden');
+            setUsernameScreen.classList.remove('hidden');
+            playerUsernameInput.value = currentUsername || ''; // Pre-fill if already set
+            usernameErrorMessage.classList.add('hidden');
         }
 
         /**
-         * Handles user login.
+         * Saves the user's chosen username to Firestore.
          */
-        function handleLogin() {
-            // For demonstration, a simple hardcoded check.
-            // In a real application, this would involve backend authentication.
-            const username = usernameInput.value;
-            const password = passwordInput.value;
+        async function saveUsername() {
+            const username = playerUsernameInput.value.trim();
+            if (!username) {
+                usernameErrorMessage.classList.remove('hidden');
+                return;
+            }
 
-            if (username === 'user' && password === 'password') {
+            try {
+                // Store username in a private collection for the user
+                const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile`, 'info');
+                await setDoc(userDocRef, { username: username, userId: userId }, { merge: true });
+                currentUsername = username;
                 showIntroScreen();
-            } else {
-                loginMessage.classList.remove('hidden');
+            } catch (error) {
+                console.error("Error saving username:", error);
+                showModal("Error", "Failed to save username. Please try again.");
             }
         }
 
@@ -434,9 +582,9 @@
         }
 
         /**
-         * Ends Phase 1 and displays results.
+         * Ends Phase 1, saves score, and displays results and leaderboard.
          */
-        function endPhase1() {
+        async function endPhase1() {
             hideAllScreens();
             resultsScreen.classList.remove('hidden');
 
@@ -454,22 +602,108 @@
                 medalText = 'No medal this time. Keep practicing!';
             }
             medalAward.innerHTML = medalText;
+
+            // Save score to leaderboard
+            if (userId && currentUsername) {
+                try {
+                    const leaderboardCollectionRef = collection(db, `artifacts/${appId}/public/data/leaderboard`);
+                    await addDoc(leaderboardCollectionRef, {
+                        userId: userId,
+                        username: currentUsername,
+                        score: finalScore,
+                        timestamp: serverTimestamp() // Use server timestamp for accurate ordering
+                    });
+                } catch (error) {
+                    console.error("Error saving score to leaderboard:", error);
+                    showModal("Error", "Failed to save your score to the leaderboard.");
+                }
+            } else {
+                console.warn("User ID or Username not available, skipping score save.");
+            }
+
+            // Load and display leaderboard
+            loadLeaderboard();
         }
 
+        /**
+         * Loads and displays the leaderboard from Firestore.
+         */
+        function loadLeaderboard() {
+            leaderboardLoading.classList.remove('hidden');
+            leaderboardTable.classList.add('hidden');
+            leaderboardError.classList.add('hidden');
+            leaderboardBody.innerHTML = ''; // Clear previous entries
+
+            try {
+                const leaderboardCollectionRef = collection(db, `artifacts/${appId}/public/data/leaderboard`);
+                const q = query(leaderboardCollectionRef);
+
+                onSnapshot(q, (snapshot) => {
+                    const scores = [];
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        scores.push({
+                            id: doc.id,
+                            username: data.username || 'Anonymous',
+                            score: data.score,
+                            timestamp: data.timestamp ? data.timestamp.toDate() : new Date(0)
+                        });
+                    });
+
+                    // Sort scores in memory: highest score first, then by earliest timestamp for ties
+                    scores.sort((a, b) => {
+                        if (b.score !== a.score) {
+                            return b.score - a.score;
+                        }
+                        return a.timestamp.getTime() - b.timestamp.getTime();
+                    });
+
+                    leaderboardBody.innerHTML = ''; // Clear before re-rendering
+                    scores.slice(0, 10).forEach((entry, index) => { // Display top 10
+                        const row = leaderboardBody.insertRow();
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${entry.username}</td>
+                            <td>${entry.score}%</td>
+                        `;
+                    });
+
+                    leaderboardLoading.classList.add('hidden');
+                    leaderboardTable.classList.remove('hidden');
+                    if (scores.length === 0) {
+                        leaderboardError.textContent = "No scores yet. Be the first!";
+                        leaderboardError.classList.remove('hidden');
+                    }
+
+                }, (error) => {
+                    console.error("Error fetching leaderboard:", error);
+                    leaderboardLoading.classList.add('hidden');
+                    leaderboardError.textContent = "Failed to load leaderboard data.";
+                    leaderboardError.classList.remove('hidden');
+                });
+            } catch (error) {
+                console.error("Error setting up leaderboard listener:", error);
+                leaderboardLoading.classList.add('hidden');
+                leaderboardError.textContent = "An error occurred setting up leaderboard.";
+                leaderboardError.classList.remove('hidden');
+            }
+        }
+
+
         // --- Event Listeners ---
-        loginButton.addEventListener('click', handleLogin);
-        usernameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleLogin(); });
-        passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleLogin(); });
+        saveUsernameButton.addEventListener('click', saveUsername);
+        playerUsernameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') saveUsername(); });
+
         startGameButton.addEventListener('click', startPhase1);
         nextScenarioButton.addEventListener('click', nextScenario);
-        restartGameButton.addEventListener('click', showLoginScreen); // Go back to login/start screen
+        restartGameButton.addEventListener('click', showSetUsernameScreen);
 
         modalCloseButton.addEventListener('click', () => {
             messageModal.classList.add('hidden');
         });
 
-        // Initial screen load
-        window.onload = showLoginScreen;
+        // Initial Firebase and game setup
+        window.onload = initializeFirebase;
 
     </script>
 </body>
