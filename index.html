@@ -257,6 +257,7 @@
 
         <!-- Game Play Screen -->
         <div id="game-play-screen" class="hidden flex flex-col gap-4">
+            <div class="text-2xl font-bold text-blue-300 text-center" id="player-name-display"></div>
             <div class="security-level-display">
                 Security Level: <span id="security-level">100</span>%
             </div>
@@ -346,7 +347,7 @@
             currentScenarioIndex: 0,
             phase1Scenarios: [
                 {
-                    description: `<img src="images/phishing_email_impersonating_five.png" alt="Payroll Email Screenshot" class="rounded-lg shadow-lg border border-gray-600">`,
+                    description: `<img src="images/scenario1.png" alt="Payroll Email Screenshot" class="rounded-lg shadow-lg border border-gray-600">`,
                     options: [
                         {
                             text: 'Click "Confirm My Bonus Now"',
@@ -370,19 +371,19 @@
                     description: `<img src="images/legitimate_email.png" alt="Legitimate Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full max-w-full">`,
                     options: [
                         {
-                            text: "Legitimate",
+                            text: "This is a legitimate email",
                             effect: 0,
                             feedback: "Correct! This email was professionally written, personalized, and free of red flags. Great job identifying a safe message."
                         },
                         {
-                            text: "Phishing",
+                            text: "This is a phishing email",
                             effect: -10,
-                            feedback: "Incorrect. While it's good to be cautious, this email was legitimate. Mislabeling safe emails may lead to ignored important communications."
+                            feedback: "Incorrect. While it's good to be cautious, this email is legitimate. Mislabeling safe emails can result in important emails being overlooked."
                         }
                     ]
                 },
                 {
-                    description: `<img src="images/attachment.png" alt="Fake Vendor Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full max-w-full">`,
+                    description: `<img src="images/scenario3.png" alt="Fake Vendor Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full max-w-full">`,
                     options: [
                         { text: "Open attachment", effect: -20, feedback: "Opening attachments from unknown or suspicious sources can install malware. Your security level decreased significantly." },
                         { text: "Call the company to verify vendor", effect: 0, feedback: "Smart move! Always verify offers directly with the company using official contact information. This was a phishing attempt." },
@@ -392,31 +393,31 @@
 
                 {
                     title: "",
-                    description: `<img src="images/suspicious_login.png" alt="Suspicious Login Alert Email" class="rounded-lg shadow-lg border border-gray-600 w-full max-w-full">`,
+                    description: `<img src="images/scenario4.png" alt="Suspicious Login Alert Email" class="rounded-lg shadow-lg border border-gray-600 w-full max-w-full">`,
                     options: [
                         {
-                            text: "Use official login portal",
+                            text: "Go to the official login page",
                             effect: 0,
                             feedback: "Correct! Always go directly to the official website or app to log in, never through links in suspicious emails. This was a phishing attempt."
                         },
                         {
-                            text: "Click link",
+                            text: "Click the link",
                             effect: -20,
                             feedback: "Clicking login links in suspicious emails can lead to your credentials being stolen. Your security level decreased significantly."
                         },
 
                         {
-                            text: "Share with a coworker",
+                            text: "Share the link with a trusted coworker",
                             effect: -10,
-                            feedback: "Discussing it with a coworker is good for awareness, but they might also fall for it or spread misinformation. The best action is to verify directly. Your security level decreased slightly."
+                            feedback: "Discussing it with a coworker helps, but they might also be misled. It's best to verify it yourself. Your security level slightly decreased."
                         }
                     ]
                 },
                 {
-                    description: `<img src="images/sus_attachment.png" alt="Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full max-w-full">`,
+                    description: `<img src="images/scenario5.png" alt="Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full max-w-full">`,
                     options: [
                         {
-                            text: "Legitimate email",
+                            text: "This is a legitimate email",
                             effect: -20,
                             feedback: "This email contains a suspicious attachment type that isn't commonly used for legitimate business communication. Marking it as legitimate could expose the system to malware. Your security level decreased significantly."
                         },
@@ -637,6 +638,8 @@
                 endPhase1();
                 return;
             }
+
+            document.getElementById('player-name-display').textContent = `Player: ${currentUsername}`;
 
             scenarioTitle.textContent = scenario.title;
             scenarioDescription.innerHTML = scenario.description;
