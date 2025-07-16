@@ -340,6 +340,32 @@
         let userId = null; // Will store the current user's ID
         let currentUsername = null; // Will store the user's chosen display name
 
+        async function assignAnonymousUsername(user) {
+            const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`, 'info');
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists() && userDoc.data().username) {
+                currentUsername = userDoc.data().username;
+                return;
+            }
+
+            const adjectives = ["Swift", "Brave", "Silent", "Clever", "Fierce", "Lone", "Ghost", "Stealthy", "Cyber", "Vigilant",
+                "Mighty", "Wise", "Bold", "Sharp", "Epic", "Chill", "Calm", "Blazing", "Icy", "Sly"];
+            const nouns = ["Falcon", "Panther", "Raven", "Tiger", "Wolf", "Fox", "Hawk", "Shadow", "Agent", "Hunter",
+                "Owl", "Jaguar", "Lynx", "Eagle", "Python", "Stingray", "Viper", "Bear", "Cougar", "Rhino"];
+
+            const randomName = `${adjectives[Math.floor(Math.random() * adjectives.length)]}_${nouns[Math.floor(Math.random() * nouns.length)]}_${Math.floor(100 + Math.random() * 900)}`;
+
+            currentUsername = randomName;
+
+            await setDoc(userDocRef, {
+                username: currentUsername,
+                userId: user.uid,
+                realEmail: user.email || null
+            }, { merge: true });
+        }
+
+
         // Game state and DOM elements
         let gameData = {
             currentScreen: 'loading',
@@ -531,29 +557,29 @@
                 hideAllScreens(); // Hide all screens initially
                 loadingScreen.classList.remove('hidden'); // Show loading spinner
 
-                // Sign in anonymously
-                await signInAnonymously(auth);
-
                 // Listen for auth state changes AFTER initial sign-in attempt
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
+                        // ✅ Block unverified users here
+                        if (!user.emailVerified) {
+                            window.location.href = "login.html";
+                            return;
+                        }
+
                         userId = user.uid;
-                        // Attempt to retrieve existing username for this anonymous user
+
+                        // Attempt to retrieve existing username for this authenticated user
                         const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile`, 'info');
                         const userDoc = await getDoc(userDocRef);
-                        if (userDoc.exists() && userDoc.data().username) {
-                            currentUsername = userDoc.data().username;
-                            showIntroScreen(); // User has username, go to intro
-                        } else {
-                            showSetUsernameScreen(); // User needs to set username
-                        }
+                        await assignAnonymousUsername(user);
+                        showIntroScreen();
+
                     } else {
-                        // This case should ideally not happen if signInAnonymously succeeds,
-                        // but it's good for robustness.
-                        console.warn("onAuthStateChanged received no user. Authentication might have failed or user signed out.");
-                        showModal("Authentication Error", "Could not sign in. Please refresh the page and ensure Firebase Authentication is correctly set up.");
+                        console.warn("onAuthStateChanged received no user.");
+                        showModal("Authentication Error", "Could not sign in. Please refresh the page.");
                     }
                 });
+
 
             } catch (error) {
                 console.error("Error initializing Firebase or authenticating:", error);
@@ -610,6 +636,7 @@
             hideAllScreens();
             introScreen.classList.remove('hidden');
             initialSecurityLevelDisplay.textContent = gameData.securityLevel;
+            document.getElementById('player-name-display').textContent = `Player: ${currentUsername}`;
         }
 
         /**
