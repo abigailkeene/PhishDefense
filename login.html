@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login - PhishDefense</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+  <div class="bg-gray-800 p-8 rounded shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-6">Login</h2>
+    <input id="email" type="email" placeholder="Email" class="mb-4 p-2 w-full rounded bg-gray-700 border border-gray-600" />
+    <input id="password" type="password" placeholder="Password" class="mb-4 p-2 w-full rounded bg-gray-700 border border-gray-600" />
+    <button id="login-btn" class="button-primary w-full bg-blue-500 hover:bg-blue-600 p-2 rounded font-semibold">Login</button>
+    <p id="message" class="text-sm mt-4"></p>
+    <p class="text-sm mt-4">Need an account? <a href="register.html" class="text-blue-400 underline">Create one</a></p>
+  </div>
+
+  <script type="module">
+    import { auth } from './firebase-config.js';
+    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+    const loginBtn = document.getElementById('login-btn');
+    const message = document.getElementById('message');
+
+    loginBtn.addEventListener('click', async () => {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        if (!userCred.user.emailVerified) {
+          message.textContent = "Please verify your email before logging in.";
+          message.className = "text-yellow-400";
+          return;
+        }
+
+        // Redirect to game
+        window.location.href = "game.html";
+      } catch (error) {
+        message.textContent = error.message;
+        message.className = "text-red-400";
+      }
+    });
+  </script>
+</body>
+</html>
