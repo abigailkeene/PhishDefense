@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Register - PhishDefense</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+  <div class="bg-gray-800 p-8 rounded shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-6">Create an Account</h2>
+    <input id="email" type="email" placeholder="Email" class="mb-4 p-2 w-full rounded bg-gray-700 border border-gray-600" />
+    <input id="password" type="password" placeholder="Password" class="mb-4 p-2 w-full rounded bg-gray-700 border border-gray-600" />
+    <button id="register-btn" class="button-primary w-full bg-blue-500 hover:bg-blue-600 p-2 rounded font-semibold">Register</button>
+    <p id="message" class="text-sm mt-4"></p>
+    <p class="text-sm mt-4">Returning user? <a href="login.html" class="text-blue-400 underline">Click here</a></p>
+  </div>
+
+  <script type="module">
+    import { auth } from './firebase-config.js';
+    import { createUserWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  
+    const registerBtn = document.getElementById('register-btn');
+    const message = document.getElementById('message');
+  
+    registerBtn.addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+  
+      if (!email || !password) {
+        message.textContent = "Please enter both email and password.";
+        message.className = "text-yellow-400";
+        return;
+      }
+  
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCred.user);
+  
+        // ✅ Show on-screen message
+        message.textContent = 'Verification email sent! Check your inbox and spam folder.';
+        message.className = "text-green-400";
+  
+      } catch (error) {
+        message.textContent = error.message;
+        message.className = "text-red-400";
+      }
+    });
+  </script>
+  
+</body>
+</html>
