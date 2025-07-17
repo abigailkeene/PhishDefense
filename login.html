@@ -11,16 +11,22 @@
     <input id="email" type="email" placeholder="Email" class="mb-4 p-2 w-full rounded bg-gray-700 border border-gray-600" />
     <input id="password" type="password" placeholder="Password" class="mb-4 p-2 w-full rounded bg-gray-700 border border-gray-600" />
     <button id="login-btn" class="button-primary w-full bg-blue-500 hover:bg-blue-600 p-2 rounded font-semibold">Login</button>
+
     <p id="message" class="text-sm mt-4"></p>
-    <p class="text-sm mt-4">Need an account? <a href="index.html" class="text-blue-400 underline">Create one</a></p>
+
+    <p class="text-sm mt-4">
+      <a href="#" id="forgot-password" class="text-blue-400 underline">Forgot my password</a>
+    </p>
+    <p class="text-sm mt-2">Need an account? <a href="register.html" class="text-blue-400 underline">Create one</a></p>
   </div>
 
   <script type="module">
     import { auth } from './firebase-config.js';
-    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
     const loginBtn = document.getElementById('login-btn');
     const message = document.getElementById('message');
+    const forgotPasswordLink = document.getElementById('forgot-password');
 
     loginBtn.addEventListener('click', async () => {
       const email = document.getElementById('email').value;
@@ -34,8 +40,28 @@
           return;
         }
 
-        // Redirect to game
-        window.location.href = "game.html";
+        window.location.href = "game.html"; // ✅ Login successful
+      } catch (error) {
+        message.textContent = error.message;
+        message.className = "text-red-400";
+      }
+    });
+
+    // 🔁 Forgot Password Flow
+    forgotPasswordLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+
+      if (!email) {
+        message.textContent = "Enter your email above to receive a password reset link.";
+        message.className = "text-yellow-400";
+        return;
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+        message.textContent = "Password reset email sent! Check your inbox.";
+        message.className = "text-green-400";
       } catch (error) {
         message.textContent = error.message;
         message.className = "text-red-400";
