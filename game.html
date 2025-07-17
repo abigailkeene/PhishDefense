@@ -422,20 +422,19 @@
                     description: `<img src="images/scenario4.png" alt="Suspicious Login Alert Email" class="rounded-lg shadow-lg border border-gray-600 w-full h-auto max-h-[70vh] object-contain">`,
                     options: [
                         {
-                            text: "Go to the official login page",
+                            text: "Report this as phishing",
                             effect: 0,
-                            feedback: "Correct! Always go directly to the official website or app to log in, never through links in suspicious emails. This was a phishing attempt."
+                            feedback: "Correct! Reporting suspicious emails is the best course of action to protect both yourself and the organization."
                         },
                         {
-                            text: "Click the link",
-                            effect: -20,
-                            feedback: "Clicking login links in suspicious emails can lead to your credentials being stolen. Your security level decreased significantly."
-                        },
-
-                        {
-                            text: "Share the link with a trusted coworker",
+                            text: "Do not click any links",
                             effect: -10,
-                            feedback: "Discussing it with a coworker helps, but they might also be misled. It's best to verify it yourself. Your security level slightly decreased."
+                            feedback: "This option avoids immediate risk but lacks a proactive response. It does not contribute to protecting the broader organization. Your security level slightly decreased."
+                        },
+                        {
+                            text: "This email looks safe – proceed",
+                            effect: -20,
+                            feedback: "This option is a risky behavior. It could lead to credential compromise. Your security level decreased."
                         }
                     ]
                 },
@@ -450,7 +449,7 @@
                         {
                             text: "Phishing email – suspicious sender email address",
                             effect: -10,
-                            feedback: "You're on the right track being cautious. However, in this case, the sender email address was actually valid. The true red flag was the suspicious file type attached. Your security level decreased slightly."
+                            feedback: "Good job being cautious. However, the email address is valid. The real warning sign is the suspicious file type. Your security score dropped."
                         },
                         {
                             text: "Phishing email – suspicious attachment",
