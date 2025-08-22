@@ -2,50 +2,473 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Register - PhishDefense</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PhishDefense Game</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Inter',sans-serif;background:#1a202c;color:#e2e8f0;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box}
+    .game-container{background:#2d3748;border-radius:1rem;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);padding:2.5rem;max-width:900px;width:100%;text-align:center;display:flex;flex-direction:column;gap:1.5rem}
+    .button-primary{background:#4299e1;color:#fff;padding:.75rem 1.5rem;border-radius:.5rem;font-weight:600;transition:background .3s,transform .2s;cursor:pointer;border:none;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06)}
+    .button-primary:hover{background:#3182ce;transform:translateY(-2px)}
+    .button-primary:active{transform:translateY(0);box-shadow:none}
+    .button-secondary{background:#a0aec0;color:#2d3748;padding:.75rem 1.5rem;border-radius:.5rem;font-weight:600;transition:background .3s,transform .2s;cursor:pointer;border:none;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06)}
+    .button-secondary:hover{background:#718096;transform:translateY(-2px)}
+    input[type="text"]{background:#4a5568;border:1px solid #6b7280;border-radius:.5rem;padding:.75rem 1rem;color:#e2e8f0;width:100%;box-sizing:border-box}
+    input::placeholder{color:#a0aec0}
+    .hidden{display:none}
+    .feedback-message{margin-top:1rem;padding:1rem;border-radius:.5rem;font-weight:600}
+    .feedback-positive{background:#48bb78;color:#fff}
+    .feedback-negative{background:#f56565;color:#fff}
+    .security-level-display{font-size:1.5rem;font-weight:700;color:#ecc94b;margin-bottom:1rem;transition:color .2s}
+    .medal-display{font-size:2rem;margin-top:1.5rem}
+    .medal-gold{color:gold}.medal-silver{color:silver}.medal-bronze{color:#cd7f32}
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:1000}
+    .modal-content{background:#2d3748;padding:2rem;border-radius:1rem;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);text-align:center;max-width:400px;width:90%}
+    .leaderboard-table{width:100%;border-collapse:collapse;margin-top:1.5rem}
+    .leaderboard-table th,.leaderboard-table td{border:1px solid #4a5568;padding:.75rem;text-align:left}
+    .leaderboard-table th{background:#4a5568;font-weight:700;color:#e2e8f0}
+    .leaderboard-table tr:nth-child(even){background:#2d3748}
+    .leaderboard-table tr:nth-child(odd){background:#1a202c}
+    .loading-spinner{border:4px solid rgba(255,255,255,.3);border-top:4px solid #4299e1;border-radius:50%;width:30px;height:30px;animation:spin 1s linear infinite;margin:20px auto}
+    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+  </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
-  <div class="bg-gray-800 p-8 rounded shadow-md w-96">
-    <h2 class="text-2xl font-bold mb-6">Create an Account</h2>
-    <input id="email" type="email" placeholder="Email" class="mb-4 p-2 w-full rounded bg-gray-700 border border-gray-600" />
-    <input id="password" type="password" placeholder="Password" class="mb-4 p-2 w-full rounded bg-gray-700 border border-gray-600" />
-    <button id="register-btn" class="button-primary w-full bg-blue-500 hover:bg-blue-600 p-2 rounded font-semibold">Register</button>
-    <p id="message" class="text-sm mt-4"></p>
-    <p class="text-sm mt-4">Returning user? <a href="login.html" class="text-blue-400 underline">Click here</a></p>
+<body>
+  <div class="game-container">
+    <h1 class="text-4xl font-bold mb-6 text-white">PhishDefense Game</h1>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="flex flex-col gap-4 items-center justify-center">
+      <div class="loading-spinner"></div>
+      <p class="text-lg">Loading game...</p>
+    </div>
+
+    <!-- First Name Screen -->
+    <div id="first-name-screen" class="hidden flex flex-col gap-4">
+      <h2 class="text-2xl font-semibold">Welcome!</h2>
+      <p class="text-lg">Enter your <strong>first name</strong> to begin. This name will appear on the leaderboard with your score.</p>
+      <input type="text" id="first-name-input" placeholder="First name" class="mb-4" maxlength="40">
+      <button id="save-first-name-button" class="button-primary">Continue</button>
+      <p id="first-name-error" class="text-red-400 hidden">Please enter your first name.</p>
+    </div>
+
+    <!-- Game Introduction -->
+    <div id="intro-screen" class="hidden flex flex-col gap-4">
+      <p class="text-lg">In this game, you'll learn to identify and respond to common phishing attempts. Your goal is to maintain a high security level by making the right choices.</p>
+      <p class="text-lg font-bold text-green-400">Your initial security level is <span id="initial-security-level" class="text-green-400">100</span>.</p>
+      <button id="start-game-button" class="button-primary">Start Phase 1: Foundational Awareness</button>
+    </div>
+
+    <!-- Game Play Screen -->
+    <div id="game-play-screen" class="hidden flex flex-col gap-4">
+      <div class="text-2xl font-bold text-blue-300 text-center"><span id="player-name-display"></span></div>
+      <div class="security-level-display">Security Level: <span id="security-level">100</span>%</div>
+      <h3 id="scenario-title" class="text-2xl font-semibold mb-4"></h3>
+      <p id="scenario-description" class="text-lg mb-6"></p>
+      <div id="options-container" class="flex flex-wrap justify-center gap-4"></div>
+      <div id="feedback-container" class="hidden">
+        <p id="feedback-message" class="feedback-message"></p>
+        <button id="next-scenario-button" class="button-primary mt-4 hidden">Next Scenario</button>
+      </div>
+    </div>
+
+    <!-- Results + Leaderboard -->
+    <div id="results-screen" class="hidden flex flex-col gap-4">
+      <h2 class="text-3xl font-semibold mb-4">Phase 1 Complete!</h2>
+      <p class="text-xl">Your final security level for Phase 1 is: <span id="final-security-level" class="font-bold text-yellow-400"></span>%</p>
+      <p class="text-lg">Your result: <span id="final-name-with-score" class="font-semibold"></span></p>
+      <div id="medal-award" class="medal-display"></div>
+
+      <h3 class="text-2xl font-semibold mt-8 mb-4">Leaderboard</h3>
+      <div id="leaderboard-loading" class="loading-spinner"></div>
+      <table id="leaderboard-table" class="leaderboard-table hidden">
+        <thead><tr><th>Rank</th><th>Player</th><th>Score</th></tr></thead>
+        <tbody id="leaderboard-body"></tbody>
+      </table>
+      <p id="leaderboard-error" class="text-red-400 hidden">No scores yet. Be the first!</p>
+
+      <button id="restart-game-button" class="button-primary mt-6">Play Again</button>
+    </div>
+
+    <!-- Modal -->
+    <div id="message-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="modal-title" class="text-2xl font-bold mb-4"></h3>
+        <p id="modal-message" class="text-lg mb-6"></p>
+        <button id="modal-close-button" class="button-primary">OK</button>
+      </div>
+    </div>
   </div>
 
+  <!-- Firebase SDKs -->
   <script type="module">
-    import { auth } from './firebase-config.js';
-    import { createUserWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  
-    const registerBtn = document.getElementById('register-btn');
-    const message = document.getElementById('message');
-  
-    registerBtn.addEventListener('click', async () => {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-  
-      if (!email || !password) {
-        message.textContent = "Please enter both email and password.";
-        message.className = "text-yellow-400";
-        return;
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, addDoc, collection, query, onSnapshot, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDP05NGrLSDWZ9ItSgIuf4TPSX6LhQh_tA",
+      authDomain: "gen-lang-client-0227847209.firebaseapp.com",
+      projectId: "gen-lang-client-0227847209",
+      storageBucket: "gen-lang-client-0227847209.firebasestorage.app",
+      messagingSenderId: "778908946281",
+      appId: "1:778908946281:web:97e09c14faccc30fa237f8",
+      measurementId: "G-RSY79PBTHG"
+    };
+
+    const appId = "phishdefense-game-app";
+
+    // --- App state
+    let app, db, auth;
+    let userId = null;
+    let firstName = null;  // typed name we’ll show + save with score
+
+    // --- DOM
+    const loadingScreen = document.getElementById('loading-screen');
+    const firstNameScreen = document.getElementById('first-name-screen');
+    const firstNameInput = document.getElementById('first-name-input');
+    const saveFirstNameButton = document.getElementById('save-first-name-button');
+    const firstNameError = document.getElementById('first-name-error');
+
+    const introScreen = document.getElementById('intro-screen');
+    const startGameButton = document.getElementById('start-game-button');
+    const initialSecurityLevelDisplay = document.getElementById('initial-security-level');
+
+    const gamePlayScreen = document.getElementById('game-play-screen');
+    const playerNameDisplay = document.getElementById('player-name-display');
+    const securityLevelDisplay = document.getElementById('security-level');
+    const scenarioTitle = document.getElementById('scenario-title');
+    const scenarioDescription = document.getElementById('scenario-description');
+    const optionsContainer = document.getElementById('options-container');
+    const feedbackContainer = document.getElementById('feedback-container');
+    const feedbackMessage = document.getElementById('feedback-message');
+    const nextScenarioButton = document.getElementById('next-scenario-button');
+
+    const resultsScreen = document.getElementById('results-screen');
+    const finalSecurityLevelDisplay = document.getElementById('final-security-level');
+    const nameWithScoreEl = document.getElementById('final-name-with-score');
+    const medalAward = document.getElementById('medal-award');
+    const restartGameButton = document.getElementById('restart-game-button');
+    const leaderboardTable = document.getElementById('leaderboard-table');
+    const leaderboardBody = document.getElementById('leaderboard-body');
+    const leaderboardLoading = document.getElementById('leaderboard-loading');
+    const leaderboardError = document.getElementById('leaderboard-error');
+
+    const messageModal = document.getElementById('message-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalCloseButton = document.getElementById('modal-close-button');
+
+    // --- Utility UI
+    function showModal(title, message){ modalTitle.textContent=title; modalMessage.textContent=message; messageModal.classList.remove('hidden'); }
+    function hideAllScreens(){ loadingScreen.classList.add('hidden'); firstNameScreen.classList.add('hidden'); introScreen.classList.add('hidden'); gamePlayScreen.classList.add('hidden'); resultsScreen.classList.add('hidden'); }
+
+    // --- Game state
+    const gameData = {
+      securityLevel: 100,
+      currentScenarioIndex: 0,
+      phase1Scenarios: [
+        {
+          description: `<img src="images/scenario1.png" alt="Payroll Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full h-auto max-h-[70vh] object-contain">`,
+          options: [
+            { text:'Click "Confirm My Bonus Now"', effect:-20, feedback:"Oh no! Clicking the link in this phishing email could lead to stolen credentials or malware. Your security level decreased significantly." },
+            { text:"Ignore Email", effect:-10, feedback:"Ignoring it is better than clicking, but it still leaves the threat unreported. Your security level decreased slightly." },
+            { text:"Report to HR", effect:0, feedback:"Excellent choice! Reporting suspicious emails helps protect the entire organization. This was a phishing attempt." }
+          ]
+        },
+        {
+          title:"Legitimate vs Phishing",
+          description:`<img src="images/legitimate_email.png" alt="Legitimate Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full h-auto max-h-[70vh] object-contain">`,
+          options:[
+            { text:"This is a legitimate email", effect:0, feedback:"Correct! This email was professionally written, personalized, and free of red flags. Great job identifying a safe message." },
+            { text:"This is a phishing email", effect:-10, feedback:"Incorrect. While it's good to be cautious, this email is legitimate. Mislabeling safe emails can result in important emails being overlooked." }
+          ]
+        },
+        {
+          description:`<img src="images/scenario3.png" alt="Fake Vendor Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full h-auto max-h-[70vh] object-contain">`,
+          options:[
+            { text:"Open attachment", effect:-20, feedback:"Opening attachments from unknown or suspicious sources can install malware. Your security level decreased significantly." },
+            { text:"Call the company to verify vendor", effect:0, feedback:"Smart move! Always verify offers directly with the company using official contact information. This was a phishing attempt." },
+            { text:"Do nothing", effect:-10, feedback:"While not opening the attachment is good, doing nothing leaves the threat unaddressed. Your security level decreased slightly." }
+          ]
+        },
+        {
+          title:"",
+          description:`<img src="images/scenario4.png" alt="Suspicious Login Alert Email" class="rounded-lg shadow-lg border border-gray-600 w-full h-auto max-h-[70vh] object-contain">`,
+          options:[
+            { text:"Report this as phishing", effect:0, feedback:"Correct! Reporting suspicious emails is the best course of action to protect both yourself and the organization." },
+            { text:"Do not click any links", effect:-10, feedback:"This avoids immediate risk but isn't proactive. Your security level slightly decreased." },
+            { text:"This email looks safe – proceed", effect:-20, feedback:"Risky behavior: could lead to credential compromise. Your security level decreased." }
+          ]
+        },
+        {
+          description:`<img src="images/scenario5.png" alt="Email Screenshot" class="rounded-lg shadow-lg border border-gray-600 w-full h-auto max-h-[70vh] object-contain">`,
+          options:[
+            { text:"This is a legitimate email", effect:-20, feedback:"Suspicious attachment type often used in phishing. Marking as legitimate could expose the system. Big drop." },
+            { text:"Phishing — suspicious sender email address", effect:-10, feedback:"Good caution, but sender was valid. The real warning sign was the file type." },
+            { text:"Phishing — suspicious attachment", effect:0, feedback:"Excellent attention to detail! Attachment was risky; this was a phishing attempt." }
+          ]
+        }
+      ]
+    };
+
+    // --- UI helpers
+    function updateSecurityLevelDisplay(){
+      securityLevelDisplay.textContent = gameData.securityLevel;
+      if (gameData.securityLevel >= 80){ securityLevelDisplay.style.color = '#48bb78'; }
+      else if (gameData.securityLevel >= 50){ securityLevelDisplay.style.color = '#ecc94b'; }
+      else { securityLevelDisplay.style.color = '#f56565'; }
+      setTimeout(()=>{ securityLevelDisplay.style.color = '#ecc94b'; }, 500);
+    }
+
+    function loadScenario(){
+      feedbackContainer.classList.add('hidden');
+      nextScenarioButton.classList.add('hidden');
+      optionsContainer.innerHTML = '';
+
+      const scenario = gameData.phase1Scenarios[gameData.currentScenarioIndex];
+      if (!scenario){ endPhase1(); return; }
+
+      playerNameDisplay.textContent = firstName ? `Player: ${firstName}` : 'Player';
+      scenarioTitle.textContent = scenario.title || '';
+      scenarioDescription.innerHTML = scenario.description;
+
+      scenario.options.forEach((opt, idx)=>{
+        const btn = document.createElement('button');
+        btn.classList.add('button-primary','option-button');
+        btn.textContent = opt.text;
+        btn.dataset.optionIndex = idx;
+        optionsContainer.appendChild(btn);
+      });
+
+      document.querySelectorAll('.option-button').forEach(b=>{
+        b.addEventListener('click', handleOptionChoice);
+      });
+    }
+
+    function handleOptionChoice(e){
+      const idx = parseInt(e.target.dataset.optionIndex);
+      const scenario = gameData.phase1Scenarios[gameData.currentScenarioIndex];
+      const option = scenario.options[idx];
+
+      gameData.securityLevel += option.effect;
+      if (gameData.securityLevel < 0) gameData.securityLevel = 0;
+      updateSecurityLevelDisplay();
+
+      feedbackMessage.textContent = option.feedback;
+      feedbackMessage.classList.remove('feedback-positive','feedback-negative');
+      feedbackMessage.classList.add(option.effect < 0 ? 'feedback-negative' : 'feedback-positive');
+      feedbackContainer.classList.remove('hidden');
+
+      document.querySelectorAll('.option-button').forEach(btn=>{
+        btn.disabled = true;
+        btn.classList.remove('button-primary');
+        btn.classList.add('button-secondary');
+      });
+
+      nextScenarioButton.classList.remove('hidden');
+    }
+
+    function nextScenario(){
+      gameData.currentScenarioIndex++;
+      if (gameData.currentScenarioIndex < gameData.phase1Scenarios.length){ loadScenario(); }
+      else { endPhase1(); }
+    }
+
+    async function endPhase1(){
+      hideAllScreens();
+      resultsScreen.classList.remove('hidden');
+
+      const finalScore = gameData.securityLevel;
+      finalSecurityLevelDisplay.textContent = finalScore;
+      if (nameWithScoreEl){
+        nameWithScoreEl.textContent = `${(firstName || 'Player')} — ${finalScore}%`;
       }
-  
-      try {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCred.user);
-  
-        // ✅ Show on-screen message
-        message.textContent = 'Verification email sent! Check your inbox and spam folder.';
-        message.className = "text-green-400";
-  
-      } catch (error) {
-        message.textContent = error.message;
-        message.className = "text-red-400";
+
+      // Medal
+      let medalText = '';
+      if (finalScore === 100){ medalText = '<span class="medal-gold">🥇 Gold Medal!</span>'; }
+      else if (finalScore >= 90){ medalText = '<span class="medal-silver">🥈 Silver Medal!</span>'; }
+      else if (finalScore >= 80){ medalText = '<span class="medal-bronze">🥉 Bronze Medal!</span>'; }
+      else { medalText = 'No medal this time. Keep practicing!'; }
+      medalAward.innerHTML = medalText;
+
+      // Save score to PUBLIC leaderboard using the TYPED NAME
+      if (userId){
+        try{
+          const leaderboardRef = collection(db, `artifacts/${appId}/public/data/leaderboard`);
+          await addDoc(leaderboardRef, {
+            userId: userId,
+            username: (firstName || 'Anonymous'), // <- typed name stored & displayed
+            score: finalScore,
+            timestamp: serverTimestamp()
+          });
+        }catch(err){
+          console.error("Error saving score to leaderboard:", err);
+          showModal("Error","Failed to save your score to the leaderboard.");
+        }
+      }else{
+        console.warn("No userId; skipping leaderboard save.");
       }
+
+      loadLeaderboard();
+    }
+
+    function loadLeaderboard(){
+      leaderboardLoading.classList.remove('hidden');
+      leaderboardTable.classList.add('hidden');
+      leaderboardError.classList.add('hidden');
+      leaderboardBody.innerHTML = '';
+
+      try{
+        const leaderboardRef = collection(db, `artifacts/${appId}/public/data/leaderboard`);
+        const q = query(leaderboardRef);
+
+        onSnapshot(q, (snapshot)=>{
+          const scores = [];
+          snapshot.forEach((d)=>{
+            const data = d.data();
+            scores.push({
+              id: d.id,
+              // Prefer the typed name; keep fallbacks for any older docs
+              username: data.username || data.displayName || data.firstName || 'Anonymous',
+              score: data.score,
+              timestamp: data.timestamp ? data.timestamp.toDate() : new Date(0)
+            });
+          });
+
+          // Sort: highest score first, tiebreaker = earliest timestamp
+          scores.sort((a,b)=>{
+            if (b.score !== a.score) return b.score - a.score;
+            return a.timestamp.getTime() - b.timestamp.getTime();
+          });
+
+          leaderboardBody.innerHTML = '';
+          scores.slice(0,10).forEach((entry, i)=>{
+            const row = leaderboardBody.insertRow();
+            row.innerHTML = `<td>${i+1}</td><td>${entry.username}</td><td>${entry.score}%</td>`;
+          });
+
+          leaderboardLoading.classList.add('hidden');
+          leaderboardTable.classList.remove('hidden');
+          if (scores.length === 0){
+            leaderboardError.textContent = "No scores yet. Be the first!";
+            leaderboardError.classList.remove('hidden');
+          }
+        }, (err)=>{
+          console.error("Leaderboard snapshot error:", err);
+          leaderboardLoading.classList.add('hidden');
+          leaderboardError.textContent = "Failed to load leaderboard data.";
+          leaderboardError.classList.remove('hidden');
+        });
+      }catch(err){
+        console.error("Error setting up leaderboard listener:", err);
+        leaderboardLoading.classList.add('hidden');
+        leaderboardError.textContent = "An error occurred setting up leaderboard.";
+        leaderboardError.classList.remove('hidden');
+      }
+    }
+
+    function showIntroScreen(){
+      hideAllScreens();
+      introScreen.classList.remove('hidden');
+      initialSecurityLevelDisplay.textContent = gameData.securityLevel;
+      playerNameDisplay.textContent = firstName ? `Player: ${firstName}` : `Player`;
+    }
+
+    function showFirstNameScreen(){
+      hideAllScreens();
+      firstNameScreen.classList.remove('hidden');
+      firstNameInput.value = firstName || "";
+      firstNameError.classList.add('hidden');
+      firstNameInput.focus();
+    }
+
+    async function saveFirstName(){
+      const value = (firstNameInput.value || "").trim();
+      if (!value){ firstNameError.classList.remove('hidden'); return; }
+      try{
+        const ref = doc(db, `artifacts/${appId}/users/${userId}/profile`, 'info');
+        await setDoc(ref, { firstName: value, userId }, { merge: true });
+        firstName = value;
+        showIntroScreen();
+      }catch(err){
+        console.error(err);
+        showModal("Error","Failed to save your name. Please try again.");
+      }
+    }
+
+    async function getOrCreateProfile(user){
+      const ref = doc(db, `artifacts/${appId}/users/${user.uid}/profile`, 'info');
+      const snap = await getDoc(ref);
+      if (snap.exists()){
+        const data = snap.data();
+        firstName = data.firstName || null;
+      }
+      return { ref };
+    }
+
+    // --- Initialization
+    async function initialize(){
+      try{
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        // Start loading state
+        hideAllScreens();
+        loadingScreen.classList.remove('hidden');
+
+        // Ensure anonymous auth
+        onAuthStateChanged(auth, async (user)=>{
+          try{
+            if (!user){
+              await signInAnonymously(auth);
+              return;
+            }
+            userId = user.uid;
+
+            // Get/create private profile
+            await getOrCreateProfile(user);
+
+            // If we already have a first name, go straight to intro; else ask for it
+            if (firstName){ showIntroScreen(); }
+            else { showFirstNameScreen(); }
+
+          }catch(err){
+            console.error("Auth/profile error:", err);
+            showModal("Authentication Error","Could not start the game. Please refresh the page.");
+          }
+        });
+
+      }catch(err){
+        console.error("Initialization error:", err);
+        showModal("Error","Failed to initialize the game. Check your Firebase configuration and network.");
+        hideAllScreens();
+      }
+    }
+
+    // --- Events
+    saveFirstNameButton.addEventListener('click', saveFirstName);
+    firstNameInput.addEventListener('keypress', (e)=>{ if (e.key === 'Enter') saveFirstName(); });
+
+    startGameButton.addEventListener('click', ()=>{
+      // reset game state
+      gameData.securityLevel = 100;
+      gameData.currentScenarioIndex = 0;
+      hideAllScreens();
+      gamePlayScreen.classList.remove('hidden');
+      updateSecurityLevelDisplay();
+      loadScenario();
     });
+
+    nextScenarioButton.addEventListener('click', nextScenario);
+    restartGameButton.addEventListener('click', showFirstNameScreen);
+    modalCloseButton.addEventListener('click', ()=> messageModal.classList.add('hidden') );
+
+    window.onload = initialize;
   </script>
-  
 </body>
 </html>
